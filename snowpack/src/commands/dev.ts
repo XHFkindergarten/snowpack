@@ -974,6 +974,9 @@ export async function startServer(
       useFsEvents: isFsEventsEnabled(),
     });
     watcher.on('add', async (fileLoc) => {
+      const keys = Array.from(inMemoryBuildCache.keys());
+      const entryKeys = keys.filter((key) => key.includes('/entry/index'));
+      entryKeys.forEach((key) => inMemoryBuildCache.delete(key));
       knownETags.clear();
       await pkgSource.prepareSingleFile(fileLoc);
       await onWatchEvent(fileLoc);
