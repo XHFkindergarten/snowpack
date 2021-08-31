@@ -983,6 +983,9 @@ export async function startServer(
       fileToUrlMapping.add(fileLoc, getUrlsForFile(fileLoc, config)!);
     });
     watcher.on('unlink', async (fileLoc) => {
+      const keys = Array.from(inMemoryBuildCache.keys());
+      const entryKeys = keys.filter((key) => key.includes('/entry/index'));
+      entryKeys.forEach((key) => inMemoryBuildCache.delete(key));
       knownETags.clear();
       await onWatchEvent(fileLoc);
       fileToUrlMapping.delete(fileLoc);
