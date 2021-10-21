@@ -302,6 +302,7 @@ function extractJsFromAstro(contents: string): string {
 export function scanDepList(depList: string[], cwd: string): InstallTarget[] {
   return depList
     .map((whitelistItem) => {
+      // 不是一个动态匹配符，直接生成
       if (!glob.hasMagic(whitelistItem)) {
         return [createInstallTarget(whitelistItem, true)];
       } else {
@@ -320,6 +321,8 @@ export async function scanImports(
 
   const includeFileSets = await Promise.all(
     Object.entries(config.mount).map(async ([fromDisk, mountEntry]) => {
+      // fromDisk 挂载的目录绝对地址
+      // mountEntry 对应的挂载配置对象
       const allMatchedFiles = (await new fdir()
         .withFullPaths()
         .crawl(fromDisk)
