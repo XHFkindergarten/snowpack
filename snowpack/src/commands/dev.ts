@@ -268,8 +268,8 @@ export async function startServer(
   const isPreparePackages = _preparePackages ?? true;
   const pkgSource = getPackageSource(config);
   if (isPreparePackages) {
-    await pkgSource.prepare();
-    logger.info(colors.bold('Ready!!!'));
+    // await pkgSource.prepare();
+    logger.info(colors.bold('Ready!!'));
   }
   let serverStart = performance.now();
   const {port: defaultPort, hostname, open, openUrl} = config.devOptions;
@@ -495,18 +495,18 @@ export async function startServer(
     if (reqPath.startsWith(PACKAGE_PATH_PREFIX)) {
       // Backwards-compatable redirect for legacy package URLs: If someone has created an import URL manually
       // (ex: /_snowpack/pkg/react.js) then we need to redirect and warn to use our new API in the future.
-      if (reqUrl.split('.').length <= 2 && config.packageOptions.source !== 'remote') {
-        if (!warnedDeprecatedPackageImport.has(reqUrl)) {
-          logger.warn(
-            `(${reqUrl}) Deprecated manual package import. Please use snowpack.getUrlForPackage() to create package URLs instead.`,
-          );
-          warnedDeprecatedPackageImport.add(reqUrl);
-        }
-        const redirectUrl = await pkgSource.resolvePackageImport(
-          reqUrl.replace(PACKAGE_PATH_PREFIX, '').replace(/\.js/, ''),
-        );
-        reqPath = decodeURI(url.parse(redirectUrl).pathname!);
-      }
+      // if (reqUrl.split('.').length <= 2 && config.packageOptions.source !== 'remote') {
+      //   if (!warnedDeprecatedPackageImport.has(reqUrl)) {
+      //     logger.warn(
+      //       `(${reqUrl}) Deprecated manual package import. Please use snowpack.getUrlForPackage() to create package URLs instead.`,
+      //     );
+      //     warnedDeprecatedPackageImport.add(reqUrl);
+      //   }
+      //   const redirectUrl = await pkgSource.resolvePackageImport(
+      //     reqUrl.replace(PACKAGE_PATH_PREFIX, '').replace(/\.js/, ''),
+      //   );
+      //   reqPath = decodeURI(url.parse(redirectUrl).pathname!);
+      // }
       const resourcePath = reqPath.replace(/\.map$/, '').replace(/\.proxy\.js$/, '');
       const webModuleUrl = resourcePath.substr(PACKAGE_PATH_PREFIX.length);
       let loadedModule = await pkgSource.load(webModuleUrl, {isSSR});
@@ -827,24 +827,24 @@ export async function startServer(
     }
     // Backwards-compatable redirect for legacy package URLs: If someone has created an import URL manually
     // (ex: /_snowpack/pkg/react.js) then we need to redirect and warn to use our new API in the future.
-    if (
-      reqUrl.startsWith(PACKAGE_PATH_PREFIX) &&
-      reqUrl.split('.').length <= 2 &&
-      config.packageOptions.source !== 'remote'
-    ) {
-      if (!warnedDeprecatedPackageImport.has(reqUrl)) {
-        logger.warn(
-          `(${reqUrl}) Deprecated manual package import. Please use snowpack.getUrlForPackage() to create package URLs instead.`,
-        );
-        warnedDeprecatedPackageImport.add(reqUrl);
-      }
-      const redirectUrl = await pkgSource.resolvePackageImport(
-        reqUrl.replace(PACKAGE_PATH_PREFIX, '').replace(/\.js/, ''),
-      );
-      res.writeHead(301, {Location: redirectUrl});
-      res.end();
-      return;
-    }
+    // if (
+    //   reqUrl.startsWith(PACKAGE_PATH_PREFIX) &&
+    //   reqUrl.split('.').length <= 2 &&
+    //   config.packageOptions.source !== 'remote'
+    // ) {
+    //   if (!warnedDeprecatedPackageImport.has(reqUrl)) {
+    //     logger.warn(
+    //       `(${reqUrl}) Deprecated manual package import. Please use snowpack.getUrlForPackage() to create package URLs instead.`,
+    //     );
+    //     warnedDeprecatedPackageImport.add(reqUrl);
+    //   }
+    //   const redirectUrl = await pkgSource.resolvePackageImport(
+    //     reqUrl.replace(PACKAGE_PATH_PREFIX, '').replace(/\.js/, ''),
+    //   );
+    //   res.writeHead(301, {Location: redirectUrl});
+    //   res.end();
+    //   return;
+    // }
 
     // Otherwise, load the file and respond if successful.
     try {

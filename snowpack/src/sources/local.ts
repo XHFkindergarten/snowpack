@@ -6,11 +6,11 @@ import {
   resolveEntrypoint,
 } from 'esinstall';
 import findUp from 'find-up';
-import {existsSync, promises as fs} from 'fs';
+import {existsSync, promises as fs, statSync} from 'fs';
 import * as colors from 'kleur/colors';
 import mkdirp from 'mkdirp';
 import pacote from 'pacote';
-import path from 'path';
+import path, {resolve} from 'path';
 import rimraf from 'rimraf';
 import slash from 'slash';
 import {getBuiltFileUrls} from '../build/file-urls';
@@ -270,79 +270,127 @@ export class PackageSourceLocal implements PackageSource {
   }
 
   async load(id: string, {isSSR}: {isSSR?: boolean} = {}) {
-    const {config, allPackageImports} = this;
-    const packageImport = allPackageImports[id];
-    if (!packageImport) {
+    const {config} = this;
+    const WORK_ROOT = config.root;
+    // id: react.v17.0.2.js
+
+    const CACHE_ROOT = resolve(WORK_ROOT, 'node_modules', '.cache', 'fe', 'build');
+
+    if (!existsSync(CACHE_ROOT) || !statSync(CACHE_ROOT).isDirectory()) {
       return;
     }
-    const {loc, entrypoint, packageName, packageVersion} = packageImport;
-    let {installDest} = packageImport;
-    if (isSSR && existsSync(installDest + '-ssr')) {
-      installDest += '-ssr';
+
+    let pureFileName: string;
+
+    if (id.startsWith('chunk/')) {
+      // handle chunk
+      pureFileName = id;
+    } else {
+      // format pkg name info file name
+      pureFileName = (() => {
+        const arr = id.split('.');
+        const ext = arr.pop();
+        const name = arr.join('.').replace(/\./g, '_');
+        return `${name}.${ext}`;
+      })();
     }
-    let packageCode = await fs.readFile(loc, 'utf8');
-    const imports: InstallTarget[] = [];
-    const type = path.extname(loc);
-    if (!(type === '.js' || type === '.html' || type === '.css')) {
-      return {contents: packageCode, imports};
+
+    const targetPath = resolve(CACHE_ROOT, pureFileName);
+
+    /**
+     * @file
+     * react.js
+     * @fe_router.js
+     * @pd_pd.js
+     * @pd_pd_icons_outline.js
+     * @pd-components_login.js
+     */
+
+    /**
+     * @request
+     * react.js
+     * @fe.router.js
+     * @pd.pd.js
+     * @pd-components.login.js
+     */
+
+    if (existsSync(targetPath)) {
+      const contents = await fs.readFile(targetPath, 'utf-8');
+      return {
+        contents,
+        imports: [],
+      };
     }
-    const packageImportMap = JSON.parse(
-      await fs.readFile(path.join(installDest, 'import-map.json'), 'utf8'),
-    );
-    const resolveImport = async (spec): Promise<string> => {
-      if (isRemoteUrl(spec)) {
-        return spec;
-      }
-      if (spec.startsWith('/')) {
-        return spec;
-      }
-      // These are a bit tricky: relative paths within packages always point to
-      // relative files within the built package (ex: 'pkg/common/XXX-hash.js`).
-      // We resolve these to a new kind of "internal" import URL that's different
-      // from the normal, flattened URL for public imports.
-      if (isPathImport(spec)) {
-        const newLoc = path.resolve(path.dirname(loc), spec);
-        const resolvedSpec = slash(path.relative(installDest, newLoc));
-        const publicImportEntry = Object.entries(packageImportMap.imports).find(
-          ([, v]) => v === './' + resolvedSpec,
-        );
-        // If this matches the destination of a public package import, resolve to it.
-        if (publicImportEntry) {
-          spec = publicImportEntry[0];
-          return await this.resolvePackageImport(spec, {source: entrypoint});
-        }
-        // Otherwise, create a relative import ID for the internal file.
-        const relativeImportId = path.posix.join(`${packageName}.v${packageVersion}`, resolvedSpec);
-        this.allPackageImports[relativeImportId] = {
-          entrypoint: path.join(installDest, 'package.json'),
-          loc: newLoc,
-          installDest,
-          packageVersion,
-          packageName,
-        };
-        return path.posix.join(config.buildOptions.metaUrlPath, 'pkg', relativeImportId);
-      }
-      // Otherwise, resolve this specifier as an external package.
-      return await this.resolvePackageImport(spec, {source: entrypoint});
-    };
-    packageCode = await transformFileImports({type, contents: packageCode}, async (spec) => {
-      let resolvedImportUrl = await resolveImport(spec);
-      const importExtName = path.posix.extname(resolvedImportUrl);
-      const isProxyImport = importExtName && importExtName !== '.js' && importExtName !== '.mjs';
-      if (config.buildOptions.resolveProxyImports && isProxyImport) {
-        resolvedImportUrl = resolvedImportUrl + '.proxy.js';
-      }
-      imports.push(
-        createInstallTarget(
-          path.resolve(
-            path.posix.join(config.buildOptions.metaUrlPath, 'pkg', id),
-            resolvedImportUrl,
-          ),
-        ),
-      );
-      return resolvedImportUrl;
-    });
-    return {contents: packageCode, imports};
+    return;
+
+    // const {loc, entrypoint, packageName, packageVersion} = packageImport;
+    // let {installDest} = packageImport;
+    // if (isSSR && existsSync(installDest + '-ssr')) {
+    //   installDest += '-ssr';
+    // }
+    // let packageCode = await fs.readFile(loc, 'utf8');
+    // const imports: InstallTarget[] = [];
+    // const type = path.extname(loc);
+    // if (!(type === '.js' || type === '.html' || type === '.css')) {
+    //   return {contents: packageCode, imports};
+    // }
+    // const packageImportMap = JSON.parse(
+    //   await fs.readFile(path.join(installDest, 'import-map.json'), 'utf8'),
+    // );
+    // const resolveImport = async (spec): Promise<string> => {
+    //   if (isRemoteUrl(spec)) {
+    //     return spec;
+    //   }
+    //   if (spec.startsWith('/')) {
+    //     return spec;
+    //   }
+    //   // These are a bit tricky: relative paths within packages always point to
+    //   // relative files within the built package (ex: 'pkg/common/XXX-hash.js`).
+    //   // We resolve these to a new kind of "internal" import URL that's different
+    //   // from the normal, flattened URL for public imports.
+    //   if (isPathImport(spec)) {
+    //     const newLoc = path.resolve(path.dirname(loc), spec);
+    //     const resolvedSpec = slash(path.relative(installDest, newLoc));
+    //     const publicImportEntry = Object.entries(packageImportMap.imports).find(
+    //       ([, v]) => v === './' + resolvedSpec,
+    //     );
+    //     // If this matches the destination of a public package import, resolve to it.
+    //     if (publicImportEntry) {
+    //       spec = publicImportEntry[0];
+    //       return await this.resolvePackageImport(spec, {source: entrypoint});
+    //     }
+    //     // Otherwise, create a relative import ID for the internal file.
+    //     const relativeImportId = path.posix.join(`${packageName}.v${packageVersion}`, resolvedSpec);
+    //     this.allPackageImports[relativeImportId] = {
+    //       entrypoint: path.join(installDest, 'package.json'),
+    //       loc: newLoc,
+    //       installDest,
+    //       packageVersion,
+    //       packageName,
+    //     };
+    //     return path.posix.join(config.buildOptions.metaUrlPath, 'pkg', relativeImportId);
+    //   }
+    //   // Otherwise, resolve this specifier as an external package.
+    //   return await this.resolvePackageImport(spec, {source: entrypoint});
+    // };
+    // packageCode = await transformFileImports({type, contents: packageCode}, async (spec) => {
+    //   let resolvedImportUrl = await resolveImport(spec);
+    //   const importExtName = path.posix.extname(resolvedImportUrl);
+    //   const isProxyImport = importExtName && importExtName !== '.js' && importExtName !== '.mjs';
+    //   if (config.buildOptions.resolveProxyImports && isProxyImport) {
+    //     resolvedImportUrl = resolvedImportUrl + '.proxy.js';
+    //   }
+    //   imports.push(
+    //     createInstallTarget(
+    //       path.resolve(
+    //         path.posix.join(config.buildOptions.metaUrlPath, 'pkg', id),
+    //         resolvedImportUrl,
+    //       ),
+    //     ),
+    //   );
+    //   return resolvedImportUrl;
+    // });
+    // return {contents: packageCode, imports};
   }
 
   async modifyBuildInstallOptions(installOptions, installTargets) {
@@ -744,7 +792,8 @@ export class PackageSourceLocal implements PackageSource {
       throw new Error(`Unexpected: Unscanned package import "${spec}" couldn't be built/resolved.`);
     }
     await this.buildPackageImport(_spec, options.source, true);
-    return this.resolvePackageImport(_spec, {source: options.source, isRetry: true});
+    const res = await this.resolvePackageImport(_spec, {source: options.source, isRetry: true});
+    return res;
   }
 
   clearCache() {

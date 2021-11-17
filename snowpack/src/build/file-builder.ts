@@ -149,9 +149,11 @@ export class FileBuilder {
         // Handle a package import
         if (!resolvedImportUrl) {
           try {
-            return await pkgSource.resolvePackageImport(spec, {
-              importMap: importMap || (isResolve ? undefined : {imports: {}}),
-            });
+            const PACKAGE_PATH_PREFIX = path.posix.join(
+              this.config.buildOptions.metaUrlPath,
+              'pkg/',
+            );
+            return path.posix.join(PACKAGE_PATH_PREFIX, `${spec.replace(/\//g, '.')}.js`);
           } catch (err) {
             if (!isResolve && /not included in import map./.test(err.message)) {
               return spec;
@@ -176,7 +178,6 @@ export class FileBuilder {
       contents = await transformGlobImports({contents, resolveImportGlobSpecifier});
       contents = await transformFileImports({type, contents}, async (spec) => {
         let resolvedImportUrl = await resolveImport(spec);
-
         // Handle normal "./" & "../" import specifiers
         const importExtName = path.posix.extname(resolvedImportUrl);
         const isProxyImport = importExtName && importExtName !== '.js' && importExtName !== '.mjs';
