@@ -63,7 +63,7 @@ class SnowpackLogger {
         2,
         '0',
       )}:${String(time.getSeconds()).padStart(2, '0')}]`,
-    )} ${colors.dim(`[${name}]`)} ${text}`;
+    )} ${colors.bgWhite(colors.black(` ${name} `))} ${text}`;
 
     // add to log history and remove old logs to keep memory low
     const lastHistoryItem = this.history[this.history.length - 1];
@@ -90,25 +90,25 @@ class SnowpackLogger {
 
   /** emit messages only visible when --debug is passed */
   public debug(message: string, options?: LoggerOptions): void {
-    const name = (options && options.name) || 'snowpack';
+    const name = (options && options.name) || 'fev4';
     this.log({level: 'debug', name, message, task: options?.task});
   }
 
   /** emit general info */
   public info(message: string, options?: LoggerOptions): void {
-    const name = (options && options.name) || 'snowpack';
+    const name = (options && options.name) || 'fev4';
     this.log({level: 'info', name, message, task: options?.task});
   }
 
   /** emit non-fatal warnings */
   public warn(message: string, options?: LoggerOptions): void {
-    const name = (options && options.name) || 'snowpack';
+    const name = (options && options.name) || 'fev4';
     this.log({level: 'warn', name, message, task: options?.task});
   }
 
   /** emit critical error messages */
   public error(message: string, options?: LoggerOptions): void {
-    const name = (options && options.name) || 'snowpack';
+    const name = (options && options.name) || 'fev4';
     this.log({level: 'error', name, message, task: options?.task});
   }
 

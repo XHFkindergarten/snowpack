@@ -761,12 +761,12 @@ export class PackageSourceLocal implements PackageSource {
       return path.posix.join(config.buildOptions.metaUrlPath, 'link', builtEntrypointUrl);
     } else if (isSymlink && config.workspaceRoot !== false && !this.hasWorkspaceWarningFired) {
       this.hasWorkspaceWarningFired = true;
-      logger.warn(
-        colors.bold(`${spec}: Locally linked package detected outside of project root.\n`) +
-          `If you are working in a workspace/monorepo, set your snowpack.config.js "workspaceRoot" to your workspace\n` +
-          `directory to take advantage of fast HMR updates for linked packages. Otherwise, this package will be\n` +
-          `cached until its package.json "version" changes. To silence this warning, set "workspaceRoot: false".`,
-      );
+      // logger.warn(
+      //   colors.bold(`${spec}: Locally linked package detected outside of project root.\n`) +
+      //     `If you are working in a workspace/monorepo, set your snowpack.config.js "workspaceRoot" to your workspace\n` +
+      //     `directory to take advantage of fast HMR updates for linked packages. Otherwise, this package will be\n` +
+      //     `cached until its package.json "version" changes. To silence this warning, set "workspaceRoot: false".`,
+      // );
     }
 
     if (options.importMap) {
@@ -780,20 +780,20 @@ export class PackageSourceLocal implements PackageSource {
       throw new Error(`Unexpected: spec ${spec} not included in import map.`);
     }
     // Unscanned package imports can happen. Warn the user, and then build the import individually.
-    logger.warn(
-      colors.bold(`${spec}: Unscannable package import found.\n`) +
-        `Snowpack scans source files for package imports at startup, and on every change.\n` +
-        `But, sometimes an import gets added during the build process, invisible to our file scanner.\n` +
-        `We'll prepare this package for you now, but should add "${spec}" to "knownEntrypoints"\n` +
-        `in your config file so that this gets prepared with the rest of your imports during startup.`,
-    );
+    // logger.warn(
+    //   colors.bold(`${spec}: Unscannable package import found.\n`) +
+    //     `Snowpack scans source files for package imports at startup, and on every change.\n` +
+    //     `But, sometimes an import gets added during the build process, invisible to our file scanner.\n` +
+    //     `We'll prepare this package for you now, but should add "${spec}" to "knownEntrypoints"\n` +
+    //     `in your config file so that this gets prepared with the rest of your imports during startup.`,
+    // );
     // Built the new import, and then try resolving again.
     if (options.isRetry) {
       throw new Error(`Unexpected: Unscanned package import "${spec}" couldn't be built/resolved.`);
     }
-    await this.buildPackageImport(_spec, options.source, true);
-    const res = await this.resolvePackageImport(_spec, {source: options.source, isRetry: true});
-    return res;
+
+    const PACKAGE_PATH_PREFIX = path.posix.join(this.config.buildOptions.metaUrlPath, 'pkg/');
+    return path.posix.join(PACKAGE_PATH_PREFIX, `${spec.replace(/\//g, '.')}.js`);
   }
 
   clearCache() {

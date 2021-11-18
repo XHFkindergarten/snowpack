@@ -149,11 +149,9 @@ export class FileBuilder {
         // Handle a package import
         if (!resolvedImportUrl) {
           try {
-            const PACKAGE_PATH_PREFIX = path.posix.join(
-              this.config.buildOptions.metaUrlPath,
-              'pkg/',
-            );
-            return path.posix.join(PACKAGE_PATH_PREFIX, `${spec.replace(/\//g, '.')}.js`);
+            return await pkgSource.resolvePackageImport(spec, {
+              importMap: importMap || (isResolve ? undefined : {imports: {}}),
+            });
           } catch (err) {
             if (!isResolve && /not included in import map./.test(err.message)) {
               return spec;
