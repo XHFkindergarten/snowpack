@@ -347,9 +347,25 @@ function loadPlugins(config: SnowpackConfig): {
 
   // 2. config.plugins
   config.plugins.forEach((ref) => {
-    const pluginName = Array.isArray(ref) ? ref[0] : ref;
-    const pluginOptions = Array.isArray(ref) ? ref[1] : {};
-    const plugin = loadPluginFromConfig(pluginName, pluginOptions, config);
+    let plugin: SnowpackPlugin;
+    let pluginName: string;
+    let pluginOptions: any;
+    if (typeof ref === 'object') {
+      plugin = ref;
+      pluginName = plugin.name;
+      pluginOptions = {};
+    } else if (typeof ref === 'function') {
+      plugin = execPluginFactory(ref, {});
+      pluginName = plugin.name;
+      pluginOptions = {};
+    } else {
+      pluginName = Array.isArray(ref) ? ref[0] : ref;
+      plugin = loadPluginFromConfig(pluginName, pluginOptions, config);
+      pluginOptions = Array.isArray(ref) ? ref[1] : {};
+    }
+    // const pluginName = Array.isArray(ref) ? ref[0] : ref;
+    // const pluginOptions = Array.isArray(ref) ? ref[1] : {};
+    // const plugin = loadPluginFromConfig(pluginName, pluginOptions, config);
     logger.debug(`loaded plugin: ${pluginName}`);
     plugins.push(plugin);
   });
@@ -707,6 +723,12 @@ function resolveRelativeConfig(config: SnowpackUserConfig, configBase: string): 
   }
   if (config.plugins) {
     config.plugins = config.plugins.map((plugin) => {
+      if (typeof plugin === 'function') {
+        return plugin;
+      }
+      if (typeof plugin === 'object') {
+        return plugin;
+      }
       const name = Array.isArray(plugin) ? plugin[0] : plugin;
       const absName = path.isAbsolute(name) ? name : require.resolve(name, {paths: [configBase]});
       if (Array.isArray(plugin)) {

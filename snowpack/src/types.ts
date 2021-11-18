@@ -323,7 +323,7 @@ export type SnowpackUserConfig = {
   exclude?: string[];
   mount?: Record<string, string | Partial<MountEntry>>;
   alias?: Record<string, string>;
-  plugins?: (string | [string, any])[];
+  plugins?: (string | [string, any] | SnowpackPluginFactory | SnowpackPlugin)[];
   dependencies?: Record<string, string>;
   devOptions?: Partial<SnowpackConfig['devOptions']>;
   buildOptions?: Partial<SnowpackConfig['buildOptions']>;
