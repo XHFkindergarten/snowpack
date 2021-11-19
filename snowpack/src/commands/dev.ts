@@ -277,7 +277,7 @@ export async function startServer(
   const PACKAGE_PATH_PREFIX = path.posix.join(config.buildOptions.metaUrlPath, 'pkg/');
   const PACKAGE_LINK_PATH_PREFIX = path.posix.join(config.buildOptions.metaUrlPath, 'link/');
   let port: number | undefined;
-  let warnedDeprecatedPackageImport = new Set();
+  // let warnedDeprecatedPackageImport = new Set();
   if (defaultPort !== 0) {
     port = await getPort(defaultPort);
     // Reset the clock if we had to wait for the user prompt to select a new port.
@@ -507,7 +507,7 @@ export async function startServer(
       //   );
       //   reqPath = decodeURI(url.parse(redirectUrl).pathname!);
       // }
-      const resourcePath = reqPath.replace(/\.map$/, '').replace(/\.proxy\.js$/, '');
+      const resourcePath = reqPath.replace(/\.proxy\.js$/, '');
       const webModuleUrl = resourcePath.substr(PACKAGE_PATH_PREFIX.length);
       let loadedModule = await pkgSource.load(webModuleUrl, {isSSR});
       if (!loadedModule) {
@@ -740,7 +740,7 @@ export async function startServer(
         }
         finalizedResponse = fileBuilder.getResult(resourceType);
       }
-    } catch (err) {
+    } catch (err: any) {
       handleFinalizeError(err);
       throw err;
     }
@@ -862,7 +862,7 @@ export async function startServer(
         knownETags.set(reqPath, tag);
       }
       return;
-    } catch (err) {
+    } catch (err: any) {
       // Some consumers may want to handle/ignore errors themselves.
       if (handleError === false) {
         throw err;
@@ -1052,7 +1052,7 @@ export async function command(commandOptions: CommandOptions) {
     commandOptions.config.devOptions.hmr = commandOptions.config.devOptions.hmr !== false;
     // Start the server
     await startServer(commandOptions, {isWatch: true});
-  } catch (err) {
+  } catch (err: any) {
     logger.error(err.message);
     logger.debug(err.stack);
     process.exit(1);

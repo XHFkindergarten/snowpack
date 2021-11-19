@@ -15,11 +15,10 @@ import rimraf from 'rimraf';
 import slash from 'slash';
 import {getBuiltFileUrls} from '../build/file-urls';
 import {logger} from '../logger';
-import {scanCodeImportsExports, transformFileImports} from '../rewrite-imports';
+import {scanCodeImportsExports} from '../rewrite-imports';
 import {getInstallTargets} from '../scan-imports';
 import {ImportMap, PackageOptionsLocal, PackageSource, SnowpackConfig} from '../types';
 import {
-  createInstallTarget,
   findMatchingAliasEntry,
   getExtension,
   isJavaScript,
@@ -269,7 +268,7 @@ export class PackageSourceLocal implements PackageSource {
     }
   }
 
-  async load(id: string, {isSSR}: {isSSR?: boolean} = {}) {
+  async load(id: string) {
     const {config} = this;
     const WORK_ROOT = config.root;
     // id: react.v17.0.2.js
@@ -281,7 +280,6 @@ export class PackageSourceLocal implements PackageSource {
     }
 
     let pureFileName: string;
-
     if (id.startsWith('chunk/')) {
       // handle chunk
       pureFileName = id;
@@ -289,7 +287,11 @@ export class PackageSourceLocal implements PackageSource {
       // format pkg name info file name
       pureFileName = (() => {
         const arr = id.split('.');
-        const ext = arr.pop();
+        let ext = arr.pop();
+        // handle .js.map ext
+        if (ext === 'map') {
+          ext = `${arr.pop()}.${ext}`;
+        }
         const name = arr.join('.').replace(/\./g, '_');
         return `${name}.${ext}`;
       })();
@@ -312,6 +314,8 @@ export class PackageSourceLocal implements PackageSource {
      * @fe.router.js
      * @pd.pd.js
      * @pd-components.login.js
+     * @pd-components_login.js.map
+     * chunk/chunk-XTPZXZ5N.js.map
      */
 
     if (existsSync(targetPath)) {
