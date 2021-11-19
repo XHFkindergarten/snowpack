@@ -280,9 +280,15 @@ export class PackageSourceLocal implements PackageSource {
     }
 
     let pureFileName: string;
+
     if (id.startsWith('chunk/')) {
       // handle chunk
       pureFileName = id;
+    } else if (
+      // handle .css
+      id.endsWith('.css')
+    ) {
+      pureFileName = `${id.replace(/\./g, '_')}.js`;
     } else {
       // format pkg name info file name
       pureFileName = (() => {
@@ -293,12 +299,12 @@ export class PackageSourceLocal implements PackageSource {
           ext = `${arr.pop()}.${ext}`;
         }
         const name = arr.join('.').replace(/\./g, '_');
+
         return `${name}.${ext}`;
       })();
     }
 
     const targetPath = resolve(CACHE_ROOT, pureFileName);
-
     /**
      * @file
      * react.js
@@ -306,6 +312,7 @@ export class PackageSourceLocal implements PackageSource {
      * @pd_pd.js
      * @pd_pd_icons_outline.js
      * @pd-components_login.js
+     * @byted-sdk_web-login_dist_style_css.js
      */
 
     /**
@@ -314,6 +321,7 @@ export class PackageSourceLocal implements PackageSource {
      * @fe.router.js
      * @pd.pd.js
      * @pd-components.login.js
+     * @byted-sdk.web-login.dist.style.css
      * @pd-components_login.js.map
      * chunk/chunk-XTPZXZ5N.js.map
      */
@@ -796,6 +804,12 @@ export class PackageSourceLocal implements PackageSource {
       throw new Error(`Unexpected: Unscanned package import "${spec}" couldn't be built/resolved.`);
     }
 
+    // handle css import
+    if (spec.endsWith('css')) {
+      return path.posix.join(config.buildOptions.metaUrlPath, 'pkg', spec.replace(/\//g, '.'));
+    }
+
+    // js import
     const PACKAGE_PATH_PREFIX = path.posix.join(this.config.buildOptions.metaUrlPath, 'pkg/');
     return path.posix.join(PACKAGE_PATH_PREFIX, `${spec.replace(/\//g, '.')}.js`);
   }
