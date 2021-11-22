@@ -152,7 +152,7 @@ export class FileBuilder {
             return await pkgSource.resolvePackageImport(spec, {
               importMap: importMap || (isResolve ? undefined : {imports: {}}),
             });
-          } catch (err) {
+          } catch (err: any) {
             if (!isResolve && /not included in import map./.test(err.message)) {
               return spec;
             }

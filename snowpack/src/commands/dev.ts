@@ -3,7 +3,7 @@ import isCompressible from 'compressible';
 import {InstallTarget} from 'esinstall';
 import etag from 'etag';
 import {EventEmitter} from 'events';
-import {createReadStream, promises as fs, statSync} from 'fs';
+import {createReadStream, promises as fs, readFileSync, statSync, existsSync} from 'fs';
 import {fdir} from 'fdir';
 import picomatch from 'picomatch';
 import type {Socket} from 'net';
@@ -12,7 +12,7 @@ import http2 from 'http2';
 import * as colors from 'kleur/colors';
 import mime from 'mime-types';
 import os from 'os';
-import path from 'path';
+import path, {extname, join} from 'path';
 import {performance} from 'perf_hooks';
 import slash from 'slash';
 import stream from 'stream';
@@ -660,6 +660,19 @@ export async function startServer(
           };
         }
 
+        // fallback to search file
+        // file may be created within a plugin
+        const finallyPath = join(config.root, reqPath);
+
+        if (existsSync(finallyPath)) {
+          return {
+            contents: readFileSync(finallyPath, 'utf-8'),
+            imports: [],
+            originalFileLoc: null,
+            contentType: mime.lookup(extname(finallyPath)),
+          };
+        }
+
         throw new NotFoundError(reqPath);
       }
 
@@ -966,6 +979,10 @@ export async function startServer(
     // Start watching the file system.
     // Defer "chokidar" loading to here, to reduce impact on overall startup time
     const chokidar = await import('chokidar');
+    /**
+     * @todo
+     * remove all previous file-builder event handlers
+     */
     watcher = chokidar.watch([], {
       ignored: config.exclude.filter((k) => k !== '**/_*.{sass,scss}'), // Sass partials ignored for builds, but not for dev changes
       persistent: true,
@@ -978,7 +995,7 @@ export async function startServer(
       const entryKeys = keys.filter((key) => key.includes('/entry/index'));
       entryKeys.forEach((key) => inMemoryBuildCache.delete(key));
       knownETags.clear();
-      await pkgSource.prepareSingleFile(fileLoc);
+      // await pkgSource.prepareSingleFile(fileLoc);
       await onWatchEvent(fileLoc);
       fileToUrlMapping.add(fileLoc, getUrlsForFile(fileLoc, config)!);
     });
@@ -991,8 +1008,12 @@ export async function startServer(
       fileToUrlMapping.delete(fileLoc);
     });
     watcher.on('change', async (fileLoc) => {
+      if (fileLoc.endsWith('worker.js') || fileLoc.endsWith('worker.ts')) {
+        Array.from(inMemoryBuildCache.keys()).forEach((key) => inMemoryBuildCache.delete(key));
+        knownETags.clear();
+      }
       // TODO: If this needs to build a new dependency, report to the browser via HMR event.
-      await pkgSource.prepareSingleFile(fileLoc);
+      // await pkgSource.prepareSingleFile(fileLoc);
       await onWatchEvent(fileLoc);
     });
     // [hmrDelay] - Let users with noisy startups delay HMR (ex: 11ty, tsc builds)
