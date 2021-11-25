@@ -10,7 +10,7 @@ import {existsSync, promises as fs, statSync} from 'fs';
 import * as colors from 'kleur/colors';
 import mkdirp from 'mkdirp';
 import pacote from 'pacote';
-import path, {extname, resolve} from 'path';
+import path, {resolve} from 'path';
 import rimraf from 'rimraf';
 import slash from 'slash';
 import {getBuiltFileUrls} from '../build/file-urls';
@@ -277,22 +277,6 @@ export class PackageSourceLocal implements PackageSource {
 
     if (!existsSync(CACHE_ROOT) || !statSync(CACHE_ROOT).isDirectory()) {
       return;
-    }
-
-    if (!id.endsWith('.js')) {
-      const ext = extname(id);
-      const arr = id.split('.');
-      arr.pop();
-      const realId = arr.join('/') + ext;
-      const target = resolve(WORK_ROOT, 'node_modules', realId);
-      if (existsSync(target)) {
-        const contents = await fs.readFile(target, 'utf-8');
-        return {
-          contents,
-          imports: [],
-        };
-      }
-      return undefined;
     }
 
     let pureFileName: string;

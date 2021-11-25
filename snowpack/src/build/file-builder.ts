@@ -13,6 +13,7 @@ import {matchDynamicImportValue, scanImportsFromFiles} from '../scan-imports';
 import {getPackageSource} from '../sources/util';
 import {
   ImportMap,
+  PluginResolveImportCallback,
   SnowpackBuildMap,
   SnowpackBuildResultFileManifest,
   SnowpackBuiltFile,
@@ -175,6 +176,12 @@ export class FileBuilder {
       );
       contents = await transformGlobImports({contents, resolveImportGlobSpecifier});
       contents = await transformFileImports({type, contents}, async (spec) => {
+        const [_spec, isExternal] = await runResolveImportPipelines(spec, this.loc, this.config);
+        if (isExternal) {
+          return _spec;
+        } else {
+          spec = _spec;
+        }
         let resolvedImportUrl = await resolveImport(spec);
         // Handle normal "./" & "../" import specifiers
         const importExtName = path.posix.extname(resolvedImportUrl);
@@ -347,4 +354,66 @@ export class FileBuilder {
       await fs.writeFile(path.join(dir, outUrl), buildOutput, encoding);
     }
   }
+}
+
+// support plugin hook to overwrite import specifier
+export async function runResolveImportPipelines(
+  spec: string,
+  importer: string,
+  config: SnowpackConfig,
+): Promise<[string, boolean]> {
+  let isExternal = false;
+
+  const {plugins} = config;
+
+  for (let i = 0; i < plugins.length; i++) {
+    let {resolveImport: resolveImports} = plugins[i];
+
+    if (!resolveImports) continue;
+
+    if (!Array.isArray(resolveImports)) {
+      resolveImports = [resolveImports];
+    }
+
+    for (let j = 0; j < resolveImports.length; j++) {
+      const resolveImport = resolveImports[j];
+
+      let filter: RegExp | null = null;
+      let callback: PluginResolveImportCallback;
+      if (typeof resolveImport === 'function') {
+        callback = resolveImport;
+      } else if (
+        typeof resolveImport === 'object' &&
+        resolveImport.filter &&
+        typeof resolveImport.callback === 'function'
+      ) {
+        filter = resolveImport.filter;
+        callback = resolveImport.callback;
+      } else {
+        continue;
+      }
+
+      // filter to skip
+      if (filter && !filter.test(spec)) {
+        continue;
+      }
+
+      const callbackResult = await callback({
+        path: spec,
+        importer,
+      });
+
+      if (typeof callbackResult === 'string') {
+        return [callbackResult, isExternal];
+      } else if (!callbackResult) {
+        continue;
+      } else {
+        const {path, external = false} = callbackResult;
+
+        return [path, external];
+      }
+    }
+  }
+
+  return [spec, isExternal];
 }

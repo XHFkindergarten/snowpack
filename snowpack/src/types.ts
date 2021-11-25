@@ -136,6 +136,21 @@ export interface PluginLoadOptions {
   isPackage: boolean;
 }
 
+export interface PluginResolveImportOptions {
+  path: string;
+  importer: string | null;
+}
+
+export type PluginResolveImportResult =
+  | string
+  | {
+      path: string;
+      external?: boolean;
+    }
+  | null
+  | undefined
+  | void;
+
 export interface PluginTransformOptions {
   /** The final build file path (note: this may differ from the source, e.g. `.vue` will yield `.js` and `.css` IDs) */
   id: string;
@@ -168,6 +183,10 @@ export interface PluginOptimizeOptions {
   buildDirectory: string;
 }
 
+export type PluginResolveImportCallback = (
+  options: PluginResolveImportOptions,
+) => PluginResolveImportResult | Promise<PluginResolveImportResult>;
+
 export interface SnowpackPlugin {
   /** name of the plugin */
   name: string;
@@ -185,6 +204,20 @@ export interface SnowpackPlugin {
   };
   /** load a file that matches resolve.input */
   load?(options: PluginLoadOptions): Promise<PluginLoadResult | string | null | undefined | void>;
+  /** change a default resolve action */
+  resolveImport?:
+    | {
+        filter: RegExp;
+        callback: PluginResolveImportCallback;
+      }
+    | PluginResolveImportCallback
+    | (
+        | PluginResolveImportCallback
+        | {
+            filter: RegExp;
+            callback: PluginResolveImportCallback;
+          }
+      )[];
   /** transform a file that matches resolve.input */
   transform?(
     options: PluginTransformOptions,
