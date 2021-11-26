@@ -24,7 +24,7 @@ export interface BuildFileOptions {
  * If no match is found, fall back to just reading
  * the file from disk and return it.
  */
-async function runPipelineLoadStep(
+export async function runPipelineLoadStep(
   srcPath: string,
   {isDev, isSSR, isPackage, isHmrEnabled, config}: BuildFileOptions,
 ): Promise<SnowpackBuildMap> {

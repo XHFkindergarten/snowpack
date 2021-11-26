@@ -46,7 +46,7 @@ import {
 } from '../util';
 import {getPort, startDashboard, paintEvent} from './paint';
 import {cssModuleJSON} from '../build/import-css';
-import {runPipelineCleanupStep} from '../build/build-pipeline';
+import {buildFile, runPipelineCleanupStep} from '../build/build-pipeline';
 
 export class OneToManyMap {
   readonly keyToValue = new Map<string, string[]>();
@@ -635,7 +635,24 @@ export async function startServer(
     // If this is not a special URL route, then treat it as a normal file request.
     // Check our file<>URL mapping for the most relevant match, and continue if found.
     // Otherwise, return a 404.
-    else {
+    /**
+     * @important
+     */
+    else if (resourcePath.startsWith('/@pkg/assets')) {
+      const buildMap = await buildFile(url.pathToFileURL(resourcePath), {
+        isDev,
+        isSSR,
+        isPackage: true,
+        isHmrEnabled: false,
+        config,
+      });
+      return {
+        contents: buildMap['.css'].code,
+        imports: [],
+        originalFileLoc: null,
+        contentType: mime.lookup('.js'),
+      };
+    } else {
       let attemptedFileLoc = fileToUrlMapping.key(resourcePath);
       if (!attemptedFileLoc) {
         resourcePath = reqPath.replace(/\.map$/, '').replace(/\.proxy\.js$/, '');
